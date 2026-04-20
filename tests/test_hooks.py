@@ -156,6 +156,60 @@ class HookScriptTests(unittest.TestCase):
             self.assertNotIn("STATUSLINE SETUP NEEDED", result.stdout)
             self.assertEqual((claude_dir / ".caveman-active").read_text(), "full")
 
+    def _run_mode_tracker(self, home, prompt):
+        """Pipe a JSON UserPromptSubmit payload through caveman-mode-tracker.js."""
+        env = os.environ.copy()
+        env["HOME"] = str(home)
+        env["CLAUDE_CONFIG_DIR"] = str(home / ".claude")
+        payload = json.dumps({"prompt": prompt})
+        return subprocess.run(
+            ["node", "hooks/caveman-mode-tracker.js"],
+            cwd=REPO_ROOT,
+            env=env,
+            input=payload,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+
+    def test_slash_caveman_ultra_with_stop_word_keeps_ultra_active(self):
+        with tempfile.TemporaryDirectory(prefix="caveman-race-") as tmp:
+            home = Path(tmp)
+            (home / ".claude").mkdir()
+            self._run_mode_tracker(home, "/caveman ultra stop being so verbose")
+            flag = home / ".claude" / ".caveman-active"
+            self.assertTrue(
+                flag.exists(),
+                "slash activation must not be cancelled by the deactivation regex",
+            )
+            self.assertEqual(flag.read_text().strip(), "ultra")
+
+    def test_unrelated_normal_mode_mention_does_not_deactivate(self):
+        with tempfile.TemporaryDirectory(prefix="caveman-regex-") as tmp:
+            home = Path(tmp)
+            (home / ".claude").mkdir()
+            flag = home / ".claude" / ".caveman-active"
+            flag.write_text("full")
+            flag.chmod(0o600)
+            self._run_mode_tracker(home, "what's the normal mode for postgres replication?")
+            self.assertTrue(
+                flag.exists(),
+                "ambient 'normal mode' mention must not delete the caveman flag",
+            )
+
+    def test_explicit_exit_normal_mode_deactivates(self):
+        with tempfile.TemporaryDirectory(prefix="caveman-exit-") as tmp:
+            home = Path(tmp)
+            (home / ".claude").mkdir()
+            flag = home / ".claude" / ".caveman-active"
+            flag.write_text("full")
+            flag.chmod(0o600)
+            self._run_mode_tracker(home, "switch to normal mode please")
+            self.assertFalse(
+                flag.exists(),
+                "explicit directional exit phrase must still deactivate caveman",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
