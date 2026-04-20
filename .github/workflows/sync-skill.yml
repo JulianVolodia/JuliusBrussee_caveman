@@ -8,6 +8,7 @@ on:
       - rules/caveman-activate.md
       - caveman-compress/SKILL.md
       - caveman-compress/scripts/**
+      - .github/workflows/sync-skill.yml
 
 concurrency:
   group: sync-skill
@@ -82,6 +83,49 @@ jobs:
           printf '%s\n' '---' 'trigger: always_on' '---' '' > .windsurf/rules/caveman.md
           cat "$BODY" >> .windsurf/rules/caveman.md
 
+      - name: Sync Codex hooks.json
+        run: |
+          # Regenerate .codex/hooks.json from rules/caveman-activate.md so Codex
+          # users get a rule summary that tracks the rest of the sync targets.
+          # Codex SessionStart hooks run a shell echo, so we flatten the rule
+          # body onto one line, escape single quotes for single-quoted shell,
+          # and embed it in a JSON payload. All JSON + shell escaping is
+          # handled by Python's stdlib (json.dumps + ''\'' idiom).
+          mkdir -p .codex
+          python3 <<'PY'
+          import json
+          import re
+
+          with open("rules/caveman-activate.md", "r", encoding="utf-8") as f:
+              rules_body = f.read()
+
+          flattened = re.sub(r"\s+", " ", rules_body).strip()
+          shell_safe = flattened.replace("'", "'\\''")
+          command = "echo 'CAVEMAN MODE ACTIVE. " + shell_safe + "'"
+
+          payload = {
+              "hooks": {
+                  "SessionStart": [
+                      {
+                          "matcher": "startup|resume",
+                          "hooks": [
+                              {
+                                  "type": "command",
+                                  "command": command,
+                                  "timeout": 5,
+                                  "statusMessage": "Loading caveman mode",
+                              }
+                          ],
+                      }
+                  ]
+              }
+          }
+
+          with open(".codex/hooks.json", "w", encoding="utf-8") as f:
+              json.dump(payload, f, indent=2)
+              f.write("\n")
+          PY
+
       - name: Commit and push if changed
         run: |
           git add \
@@ -95,7 +139,8 @@ jobs:
             .clinerules/caveman.md \
             .github/copilot-instructions.md \
             .cursor/rules/caveman.mdc \
-            .windsurf/rules/caveman.md
+            .windsurf/rules/caveman.md \
+            .codex/hooks.json
           git diff --staged --quiet && exit 0
           git commit -m "chore: sync SKILL.md copies and auto-activation rules [skip ci]"
           git push
