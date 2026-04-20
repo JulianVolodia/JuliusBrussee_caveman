@@ -32,7 +32,7 @@
 
 ---
 
-A [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skill/plugin and Codex plugin that makes agent talk like caveman — cutting **~75% of output tokens** while keeping full technical accuracy. Now with [文言文 mode](#文言文-wenyan-mode), [terse commits](#caveman-commit), [one-line code reviews](#caveman-review), and a [compression tool](#caveman-compress) that cuts **~46% of input tokens** every session.
+A [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skill/plugin and Codex plugin that makes agent talk like caveman — cutting **~65% of output tokens on average** (up to 87%) while keeping full technical accuracy. Now with [文言文 mode](#文言文-wenyan-mode), [terse commits](#caveman-commit), [one-line code reviews](#caveman-review), and a [compression tool](#caveman-compress) that cuts **~46% of input tokens** every session.
 
 Based on the viral observation that caveman-speak dramatically reduces LLM token usage without losing technical substance. So we made it a one-line install.
 
@@ -196,6 +196,9 @@ Uninstall: `bash hooks/uninstall.sh` or `powershell -File hooks\uninstall.ps1`
 - **Plugin install:** If you do not already have a custom `statusLine`, Claude should offer to configure it on first session
 - **Standalone install:** Configured automatically by `install.sh` / `install.ps1` unless you already have a custom statusline
 - **Custom statusline:** Installer leaves your existing statusline alone. See [`hooks/README.md`](hooks/README.md) for the merge snippet
+
+> [!NOTE]
+> If `"disableAllHooks": true` is set in your Claude Code `settings.json` (for example while debugging), the statusline badge also disappears — Claude Code disables custom status lines along with hooks. Remove the flag or scope it down to re-enable the `[CAVEMAN]` badge.
 
 </details>
 
@@ -395,7 +398,7 @@ A March 2026 paper ["Brevity Constraints Reverse Performance Hierarchies in Lang
 
 ## Evals
 
-Caveman not just claim 75%. Caveman **prove** it.
+Caveman not just claim. Caveman **prove** it — 65% average, up to 87%.
 
 The `evals/` directory has a three-arm eval harness that measures real token compression against a proper control — not just "verbose vs skill" but "terse vs skill". Because comparing caveman to verbose Claude conflate the skill with generic terseness. That cheating. Caveman not cheat.
 

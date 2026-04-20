@@ -4,7 +4,7 @@
 # Usage: bash hooks/install.sh
 #   or:  bash <(curl -s https://raw.githubusercontent.com/JuliusBrussee/caveman/main/hooks/install.sh)
 #   or:  bash hooks/install.sh --force   (re-install over existing hooks)
-set -e
+set -euo pipefail
 
 FORCE=0
 for arg in "$@"; do

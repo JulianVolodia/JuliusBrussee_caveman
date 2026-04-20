@@ -30,6 +30,12 @@ process.stdin.on('end', () => {
       }
     }
 
+    // Track whether this prompt already triggered an explicit activation via
+    // slash command. Without this guard, "/caveman ultra stop being verbose"
+    // would activate ultra and then the deactivation block below would wipe
+    // the flag on the same turn.
+    let activated = false;
+
     // Match /caveman commands
     if (prompt.startsWith('/caveman')) {
       const parts = prompt.split(/\s+/);
@@ -55,15 +61,24 @@ process.stdin.on('end', () => {
 
       if (mode && mode !== 'off') {
         safeWriteFlag(flagPath, mode);
+        activated = true;
       } else if (mode === 'off') {
         try { fs.unlinkSync(flagPath); } catch (e) {}
       }
     }
 
-    // Detect deactivation — natural language and slash commands
-    if (/\b(stop|disable|deactivate|turn off)\b.*\bcaveman\b/i.test(prompt) ||
+    // Detect deactivation — natural language and explicit "normal mode" intent.
+    // The "normal mode" regex now requires a directional verb (exit / switch to /
+    // revert to / go back to / turn off / return to) so ambient mentions like
+    // "what's the normal mode for postgres replication?" no longer wipe the
+    // flag. Skip the block entirely if the same prompt just activated caveman
+    // via slash command, so e.g. "/caveman ultra stop being verbose" keeps the
+    // ultra mode set.
+    if (!activated && (
+        /\b(stop|disable|deactivate|turn off)\b.*\bcaveman\b/i.test(prompt) ||
         /\bcaveman\b.*\b(stop|disable|deactivate|turn off)\b/i.test(prompt) ||
-        /\bnormal mode\b/i.test(prompt)) {
+        /\b(exit|revert to|go back to|switch to|turn off|return to)\s+normal mode\b/i.test(prompt)
+    )) {
       try { fs.unlinkSync(flagPath); } catch (e) {}
     }
 
